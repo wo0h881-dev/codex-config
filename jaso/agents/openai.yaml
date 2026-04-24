@@ -1,0 +1,3 @@
+display_name: Cover Letter Interrogator
+short_description: Extract rich Korean cover letter material from simple experience keywords.
+default_prompt: Use this skill to interview me one question at a time and turn my answers into a SOARA-based Korean self-introduction essay draft.
