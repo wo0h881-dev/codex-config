@@ -41,3 +41,8 @@
 - 카카오/네이버/리디 크롤러와 러버블 데이터 운영은 `D:\Agent\Codex\skills\webnovel-data-ops\SKILL.md`를 우선 따른다.
 - 재사용 스킬/프롬프트는 `D:\Agent\Codex\skills` 아래에 둔다.
 - 보조 스크립트와 도구는 `D:\Agent\Codex\tools` 아래에 둔다.
+
+## 이사 작업
+- 사용자가 "이사해줘"라고 요청하면 `D:\Agent\Codex`의 Codex 설정 자산을 `codex-config` GitHub 저장소로 커밋/푸시한다.
+- 다른 컴퓨터에서 그대로 사용 가능하도록 스킬, 훅, 에이전트, 작업 규칙, 운영 문서를 포함한다.
+- 프로젝트 체크아웃(`Lovable_Dashboard/`, `web-novel-crawler/`), 의존성, 빌드 산출물, 가상환경, 비밀파일은 제외한다.
