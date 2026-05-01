@@ -1,0 +1,3 @@
+display_name: Web Novel Data Ops
+short_description: Maintain Kakao, Naver, and Ridi crawler data quality and Lovable dashboard changes.
+default_prompt: Use this skill to triage web novel crawler or Lovable dashboard issues, validate required fields, fix parser/UI code, and prepare PR-ready changes.

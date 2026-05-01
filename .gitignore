@@ -26,8 +26,14 @@ temp/
 
 # Dependency and build caches
 node_modules/
+.venv/
+__pycache__/
 .cache/
 dist/
 build/
 target/
+out/
 
+# External project checkouts
+Lovable_Dashboard/
+web-novel-crawler/
