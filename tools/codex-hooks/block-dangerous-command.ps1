@@ -25,10 +25,84 @@ function Get-CommandText {
     $env:COMMAND,
     $env:command,
     $env:CODEX_COMMAND,
+    $env:CWD,
+    $env:cwd,
+    $env:CODEX_CWD,
+    $env:AUTOMATION_ID,
+    $env:automation_id,
+    $env:CODEX_AUTOMATION_ID,
+    $env:AUTOMATION_NAME,
+    $env:automation_name,
+    $env:CODEX_AUTOMATION_NAME,
     $Payload.Raw,
     (Get-DeepText $Payload.Json)
   ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
   return ($textParts -join "`n")
+}
+
+function Test-TextContainsPath {
+  param([string]$Text, [string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Text) -or [string]::IsNullOrWhiteSpace($Path)) { return $false }
+  $normalizedText = (($Text -replace '\\','/') -replace '/+','/').ToLowerInvariant()
+  $normalizedPath = (($Path -replace '\\','/') -replace '/+','/').ToLowerInvariant()
+  return $normalizedText.Contains($normalizedPath)
+}
+
+function Get-ExecutionContextText {
+  param([object]$Payload)
+  $parts = @(
+    $env:CWD,
+    $env:cwd,
+    $env:CODEX_CWD,
+    $env:WORKDIR,
+    $env:workdir,
+    $env:CODEX_WORKDIR
+  )
+
+  if ($null -ne $Payload.Json) {
+    foreach ($name in @('cwd', 'CWD', 'workdir', 'WORKDIR', 'working_directory', 'workingDirectory')) {
+      try {
+        $value = $Payload.Json.$name
+        if ($value -is [string] -and -not [string]::IsNullOrWhiteSpace($value)) {
+          $parts += $value
+        }
+      } catch {}
+    }
+  }
+
+  return (($parts | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join "`n")
+}
+
+function Test-WebNovelCrawlerAutomationContext {
+  param([string]$Text, [string]$ContextText)
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+
+  $hasAutomation = (
+    $Text -match '(?i)web-novel-crawler-weekly-qa' -or
+    $env:AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
+    $env:CODEX_AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
+    $env:AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA' -or
+    $env:CODEX_AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA'
+  )
+
+  if (-not $hasAutomation) { return $false }
+
+  return (Test-TextContainsPath $ContextText 'D:\Agent\Codex\web-novel-crawler')
+}
+
+function Test-WebNovelCrawlerVenvPython {
+  param([string]$Text)
+  return (Test-TextContainsPath $Text 'D:\Agent\Codex\web-novel-crawler\.venv\Scripts\python.exe')
+}
+
+function Test-WebNovelCrawlerRuntimePython {
+  param([string]$Text)
+  return (Test-TextContainsPath $Text 'D:\Agent\Codex\runtime\python\python.exe')
+}
+
+function Test-BasePythonDirectExecution {
+  param([string]$Text)
+  return (Test-TextContainsPath $Text 'C:\Users\suna\AppData\Local\Python\pythoncore-3.14-64\python.exe')
 }
 
 function Test-SecretReadTarget {
@@ -93,9 +167,31 @@ function Test-ReadOnlyCommand {
 
 $payload = Get-HookPayload
 $commandText = Get-CommandText $payload
+$contextText = Get-ExecutionContextText $payload
 
 if (Test-SecretReadTarget $commandText) {
   Write-Error '비밀 파일 읽기/검색 차단: .env, key/pem, token/secret/password/credential, auth.json 계열은 읽을 수 없습니다.'
+  exit 2
+}
+
+if (Test-BasePythonDirectExecution $commandText) {
+  Write-Error 'C base Python 직접 실행 차단: crawler 자동화는 D:\Agent\Codex\web-novel-crawler\.venv\Scripts\python.exe만 사용해야 합니다.'
+  exit 2
+}
+
+if (Test-WebNovelCrawlerVenvPython $commandText) {
+  if (Test-WebNovelCrawlerAutomationContext $commandText $contextText) {
+    exit 0
+  }
+  Write-Error 'crawler venv Python 실행 범위 차단: web-novel-crawler-weekly-qa 자동화와 D:\Agent\Codex\web-novel-crawler cwd에서만 허용합니다.'
+  exit 2
+}
+
+if (Test-WebNovelCrawlerRuntimePython $commandText) {
+  if (Test-WebNovelCrawlerAutomationContext $commandText $contextText) {
+    exit 0
+  }
+  Write-Error 'crawler runtime Python 실행 범위 차단: web-novel-crawler-weekly-qa 자동화와 D:\Agent\Codex\web-novel-crawler cwd에서만 허용합니다.'
   exit 2
 }
 

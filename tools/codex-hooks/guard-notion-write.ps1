@@ -30,11 +30,18 @@ $writePatterns = @(
 )
 $allowedWriteTargets = @(
   'collection://35111b6c-2a63-8082-a59f-000b86242e28',
+  'collection://12f48c1e-9fb7-437b-a717-4ec89dda8d71',
   '35111b6c-2a63-8082-a59f-000b86242e28',
+  '12f48c1e-9fb7-437b-a717-4ec89dda8d71',
   '35111b6c2a6380f4bfe8e3c50731ee45',
+  '8575be5ac396407f8e3b1c2338ea60c4',
+  '34c11b6c2a6380f0bbecc72bfe773f70',
   '채용공고'
 )
 $allowedChildPageIds = @(
+  '34c11b6c2a6380f0bbecc72bfe773f70', # employment page
+  '35111b6c2a6380f4bfe8e3c50731ee45', # jobs database
+  '8575be5ac396407f8e3b1c2338ea60c4', # cover letter experience database
   '35111b6c2a63812babf4ee1dccbaa640', # 제이트리미디어 - 남성향 장르소설/웹소설 PD
   '35111b6c2a6381babfd0c961dc1fb75a', # 브리드컴퍼니 - 판타지/무협 웹소설·장르소설 PD
   '35111b6c2a63819f972ce8b5e4a5a088', # 엠스토리허브 - 웹소설 PD 경력직

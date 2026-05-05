@@ -1,0 +1,52 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|shell_command|functions\\.shell_command)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\Agent\\Codex\\tools\\codex-hooks\\block-dangerous-command.ps1\"",
+            "timeout": 10,
+            "statusMessage": "위험 명령 확인 중"
+          }
+        ]
+      },
+      {
+        "matcher": "^(apply_patch|Edit|Write|functions\\.apply_patch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\Agent\\Codex\\tools\\codex-hooks\\guard-file-edit.ps1\"",
+            "timeout": 10,
+            "statusMessage": "파일 수정 안전 확인 중"
+          }
+        ]
+      },
+      {
+        "matcher": ".*([Nn]otion|mcp__codex_apps__notion).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\Agent\\Codex\\tools\\codex-hooks\\guard-notion-write.ps1\"",
+            "timeout": 10,
+            "statusMessage": "Notion 쓰기 작업 확인 중"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write|functions\\.apply_patch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"D:\\Agent\\Codex\\tools\\codex-hooks\\notify-file-edits.ps1\"",
+            "timeout": 10,
+            "statusMessage": "파일 수정 알림 기록 중"
+          }
+        ]
+      }
+    ]
+  }
+}

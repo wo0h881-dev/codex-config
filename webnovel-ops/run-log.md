@@ -65,3 +65,47 @@
 - Commit: `d7fb953 Show crawler comment and episode fields`
 - Changes: `useTodayCombined` now accepts crawler aliases `comments`, `commentCount`, `totalEpisodes`, and `episodeCount`; `RankingCard`, `Rankings`, and `NovelDetailDrawer` no longer hide Ridi comments and show missing episode counts as `-`.
 - Verification: `npm.cmd run test` passed and `npm.cmd run build` passed after rebasing onto latest `origin/main`.
+
+## 2026-05-04 Weekly QA
+
+- Status: blocked
+- Scope checked: Kakao realtime ranking URL, Naver TOP100 URL, and 4 Ridi bestseller URLs from `watchlist.md`.
+- Web spot-check: current ranking/list pages are reachable and still expose ranking content in page HTML.
+- Environment result: `WEBAPP_URL` exists in the process environment, but its value was not printed or stored.
+- Blocker: `D:\Agent\Codex\web-novel-crawler\.venv\Scripts\python.exe` could not start because `.venv\pyvenv.cfg` points to missing base Python `C:\Users\suna\AppData\Local\Python\pythoncore-3.14-64\python.exe`.
+- Repair result: WindowsApps Python alias and other local Python launchers were unavailable in this sandbox, so the required one-time venv repair could not be completed here.
+- Crawler result: Kakao/Naver/Ridi crawler execution and required-field QA could not be performed with the mandated venv interpreter, so no parser fix or PR was prepared in this run.
+- Next action: restore an accessible base Python and recreate `.venv`, then rerun weekly QA with the project venv interpreter.
+
+## 2026-05-05 Weekly QA Recovery
+
+- Status: passed
+- Root cause: Python was not deleted; sandbox execution blocked the C-drive base Python used by the D-drive venv. Running the approved venv interpreter works.
+- Environment result: `WEBAPP_URL` exists in the process environment, but its value was not printed or stored.
+- Venv verification: `.venv\Scripts\python.exe --version`, `pip --version`, `import gspread, playwright`, and `py_compile main.py naver.py ridi.py` passed.
+- Crawler QA: Kakao realtime ranking collected 50 links and completed top 20 detail QA; Naver TOP20 returned 20 items; Ridi bestseller categories returned 48 items.
+- Field QA: required fields passed for title, author, publisher, rank, platform metric, comment/equivalent count, total episode count, and promotion info where available.
+- Result: no parser fix or PR was needed.
+
+## 2026-05-05 Weekly QA
+
+- Status: blocked
+- Scope checked: Kakao realtime ranking URL, Naver TOP100 URL, and 4 Ridi bestseller URLs from `watchlist.md`.
+- Web spot-check: current ranking/list pages are reachable and still expose ranking text for Kakao, Naver, and Ridi.
+- Environment result: `WEBAPP_URL` exists in the process environment, but its value was not printed or stored.
+- Blocker: the required interpreter `D:\Agent\Codex\web-novel-crawler\.venv\Scripts\python.exe` fails to start in this sandbox because its base Python path under `C:\Users\suna\AppData\Local\Python\pythoncore-3.14-64` is not executable from the current environment.
+- Crawler result: Kakao/Naver/Ridi crawler execution and required-field QA could not be performed with the mandated venv interpreter, so no parser fix or PR was prepared in this run.
+- Next action: rerun this automation from an environment where the project venv can start, then execute focused field QA and only patch the crawler if a parser regression is reproduced.
+
+## 2026-05-05 Weekly QA D Runtime Recovery
+
+- Status: passed
+- Runtime fix: copied the existing Python 3.14.3 installation into `D:\Agent\Codex\runtime\python`, recreated `D:\Agent\Codex\web-novel-crawler\.venv`, and verified `pyvenv.cfg` now points only to the `D:` runtime.
+- Temp/runtime fix: crawler setup now uses `D:\Agent\Codex\runtime\tmp` and `D:\Agent\Codex\runtime\playwright-browsers` to avoid `C:` temp and browser-cache access during venv bootstrap and Playwright execution.
+- Dependency fix: added missing crawler requirements `requests` and `beautifulsoup4` to `D:\Agent\Codex\web-novel-crawler\requirements.txt`.
+- Hook fix: updated `D:\Agent\Codex\tools\codex-hooks\block-dangerous-command.ps1` so `D:\Agent\Codex\runtime\python\python.exe` is allowed only for `web-novel-crawler-weekly-qa` with `cwd = D:\Agent\Codex\web-novel-crawler`, while direct `C:` base Python execution remains blocked.
+- Verification: runtime Python `--version`, `-m venv --help`, `-m pip --version`, venv Python `--version`, venv imports (`requests`, `bs4`, `gspread`, `playwright`), and `py_compile main.py naver.py ridi.py` all passed.
+- Crawler QA: `main.py` completed Kakao top 20, Naver top 20, and 4 Ridi bestseller categories using the D-drive venv and D-drive Playwright browser cache.
+- Field QA: Kakao/Naver/Ridi required values were present for title, author, publisher, rank, platform metric, total episode count, and promotion data where available. Naver/Ridi publisher values are emitted under the existing Korean schema key `출판사`. Ridi promotion rows may use `rank = 프로모션`, which was treated as expected list behavior.
+- Environment result: `WEBAPP_URL` exists in the process environment, but its value was not printed or stored.
+- Result: no parser selector failure was reproduced after the runtime migration, so no parser PR was prepared in this run.
