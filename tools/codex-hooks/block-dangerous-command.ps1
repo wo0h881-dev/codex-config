@@ -48,6 +48,20 @@ function Test-TextContainsPath {
   return $normalizedText.Contains($normalizedPath)
 }
 
+function Get-NormalizedPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return '' }
+  return (([System.IO.Path]::GetFullPath($Path) -replace '\\','/') -replace '/+','/').ToLowerInvariant()
+}
+
+function Test-PathWithin {
+  param([string]$Path, [string]$Root)
+  $normalizedPath = Get-NormalizedPath $Path
+  $normalizedRoot = Get-NormalizedPath $Root
+  if ([string]::IsNullOrWhiteSpace($normalizedPath) -or [string]::IsNullOrWhiteSpace($normalizedRoot)) { return $false }
+  return $normalizedPath.StartsWith($normalizedRoot.TrimEnd('/') + '/')
+}
+
 function Get-ExecutionContextText {
   param([object]$Payload)
   $parts = @(
@@ -77,17 +91,41 @@ function Test-WebNovelCrawlerAutomationContext {
   param([string]$Text, [string]$ContextText)
   if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
 
-  $hasAutomation = (
-    $Text -match '(?i)web-novel-crawler-weekly-qa' -or
-    $env:AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
-    $env:CODEX_AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
-    $env:AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA' -or
-    $env:CODEX_AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA'
-  )
+  $hasAutomation = Test-WebNovelAutomationId $Text
 
   if (-not $hasAutomation) { return $false }
 
   return (Test-TextContainsPath $ContextText 'D:\Agent\Codex\web-novel-crawler')
+}
+
+function Test-WebNovelAutomationId {
+  param([string]$Text)
+  return (
+    $Text -match '(?i)web-novel-crawler-weekly-qa' -or
+    $env:AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
+    $env:CODEX_AUTOMATION_ID -eq 'web-novel-crawler-weekly-qa' -or
+    $env:AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA' -or
+    $env:CODEX_AUTOMATION_NAME -eq 'Web Novel Crawler Weekly QA' -or
+    $env:AUTOMATION_NAME -eq 'Crawler + Lovable QA Auto Deploy' -or
+    $env:CODEX_AUTOMATION_NAME -eq 'Crawler + Lovable QA Auto Deploy'
+  )
+}
+
+function Test-WebNovelLovableAutomationContext {
+  param([string]$Text, [string]$ContextText)
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+  if (-not (Test-WebNovelAutomationId $Text)) { return $false }
+  return (Test-TextContainsPath $ContextText 'D:\Agent\Codex\Lovable_Dashboard')
+}
+
+function Test-WebNovelAutomationRepoContext {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelAutomationId $Text)) { return $false }
+  return (
+    (Test-TextContainsPath $ContextText 'D:\Agent\Codex\web-novel-crawler') -or
+    (Test-TextContainsPath $ContextText 'D:\Agent\Codex\Lovable_Dashboard') -or
+    (Test-TextContainsPath $ContextText 'D:\Agent\Codex')
+  )
 }
 
 function Test-WebNovelCrawlerVenvPython {
@@ -103,6 +141,131 @@ function Test-WebNovelCrawlerRuntimePython {
 function Test-BasePythonDirectExecution {
   param([string]$Text)
   return (Test-TextContainsPath $Text 'C:\Users\suna\AppData\Local\Python\pythoncore-3.14-64\python.exe')
+}
+
+function Test-WindowsAppsPythonAlias {
+  param([string]$Text)
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+
+  return (
+    $Text -match "(?i)(^|\s|[""'])python(\.exe)?(\s|[""']|$)" -or
+    (Test-TextContainsPath $Text 'C:\Users\suna\AppData\Local\Microsoft\WindowsApps\python.exe')
+  )
+}
+
+function Get-FirstPathFromText {
+  param([string]$Text)
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+
+  $pathPatterns = @(
+    '(?i)[a-z]:\\[^\r\n"''|;]+',
+    '(?i)[a-z]:/[^\r\n"''|;]+'
+  )
+
+  foreach ($pattern in $pathPatterns) {
+    $match = [regex]::Match($Text, $pattern)
+    if ($match.Success) { return $match.Value.Trim() }
+  }
+
+  return $null
+}
+
+function Test-AllowedCrawlerReadPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
+
+  $resolved = Get-NormalizedPath $Path
+  $exactAllow = @(
+    'D:\Agent\Codex\webnovel-ops\watchlist.md',
+    'D:\Agent\Codex\webnovel-ops\field-contract.md',
+    'D:\Agent\Codex\webnovel-ops\run-log.md',
+    'D:\Agent\Codex\web-novel-crawler\requirements.txt',
+    'D:\Agent\Codex\web-novel-crawler\.venv\pyvenv.cfg',
+    'D:\Agent\Codex\web-novel-crawler\.github\workflows\main.yml'
+  ) | ForEach-Object { Get-NormalizedPath $_ }
+
+  if ($exactAllow -contains $resolved) { return $true }
+  if (Test-PathWithin $Path 'D:\Agent\Codex\web-novel-crawler') { return $true }
+
+  return $false
+}
+
+function Test-AllowedCrawlerReadCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelCrawlerAutomationContext $Text $ContextText)) { return $false }
+  if ($Text -notmatch '(?i)^\s*(Get-Content|gc|cat|type|Get-ChildItem|gci|dir|ls|Select-String|sls|findstr|Test-Path|Get-Item|gi)\b') { return $false }
+
+  $firstPath = Get-FirstPathFromText $Text
+  if ($null -eq $firstPath) { return $false }
+  return (Test-AllowedCrawlerReadPath $firstPath)
+}
+
+function Test-AllowedCrawlerPyCompileCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelCrawlerAutomationContext $Text $ContextText)) { return $false }
+  if (-not (Test-WebNovelCrawlerVenvPython $Text)) { return $false }
+  return ($Text -match '(?i)-m\s+py_compile\s+main\.py\s+naver\.py\s+ridi\.py')
+}
+
+function Test-AllowedCrawlerMainRunCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelCrawlerAutomationContext $Text $ContextText)) { return $false }
+  if (-not (Test-WebNovelCrawlerVenvPython $Text)) { return $false }
+  return ($Text -match '(?i)(^|\s)main\.py(\s|$)')
+}
+
+function Test-AllowedCrawlerRunLogAppend {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelAutomationRepoContext $Text $ContextText)) { return $false }
+  if ($Text -notmatch '(?i)(^|\s|;)Add-Content\b') { return $false }
+  if (-not (Test-TextContainsPath $Text 'D:\Agent\Codex\webnovel-ops\run-log.md')) { return $false }
+  if ($Text -match '(?i)\b(WEBAPP_URL|\.env|token|secret|credential|password|auth\.json|key|pem)\b') { return $false }
+  return $true
+}
+
+function Test-AllowedLovableReadPath {
+  param([string]$Path)
+  if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
+  if (Test-PathWithin $Path 'D:\Agent\Codex\Lovable_Dashboard') { return $true }
+  return $false
+}
+
+function Test-AllowedLovableReadCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelLovableAutomationContext $Text $ContextText)) { return $false }
+  if ($Text -notmatch '(?i)^\s*(Get-Content|gc|cat|type|Get-ChildItem|gci|dir|ls|Select-String|sls|findstr|Test-Path|Get-Item|gi)\b') { return $false }
+
+  $firstPath = Get-FirstPathFromText $Text
+  if ($null -eq $firstPath) { return $true }
+  return (Test-AllowedLovableReadPath $firstPath)
+}
+
+function Test-AllowedLovableNpmCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelLovableAutomationContext $Text $ContextText)) { return $false }
+  return ($Text -match '(?i)^\s*npm(\.cmd)?\s+run\s+(test|build)\b')
+}
+
+function Test-AllowedAutomationGitCommand {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelAutomationRepoContext $Text $ContextText)) { return $false }
+  if ($Text -match '(?i)\s(--force|-f)\b') { return $false }
+  if ($Text -match '(?i)\b(reset|rebase|clean|restore)\b') { return $false }
+  return ($Text -match '(?i)^\s*git\s+(status|diff|show|log|branch|rev-parse|switch|merge|add|commit|push)\b')
+}
+
+function Test-WebAppUrlReference {
+  param([string]$Text)
+  if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+  return ($Text -match '(?i)WEBAPP_URL')
+}
+
+function Test-AllowedWebAppUrlExistenceCheck {
+  param([string]$Text, [string]$ContextText)
+  if (-not (Test-WebNovelCrawlerAutomationContext $Text $ContextText)) { return $false }
+  if ($Text -notmatch '(?i)\bTest-Path\s+Env:WEBAPP_URL\b') { return $false }
+  if ($Text -match '(?i)\b(Write-Output|Write-Host|echo|Out-File|Set-Content|Add-Content|Get-Item|Get-ChildItem)\b') { return $false }
+  return $true
 }
 
 function Test-SecretReadTarget {
@@ -169,6 +332,14 @@ $payload = Get-HookPayload
 $commandText = Get-CommandText $payload
 $contextText = Get-ExecutionContextText $payload
 
+if (Test-WebAppUrlReference $commandText) {
+  if (Test-AllowedWebAppUrlExistenceCheck $commandText $contextText) {
+    exit 0
+  }
+  Write-Error 'WEBAPP_URL 값 출력/저장 차단: 존재 여부 확인만 허용합니다.'
+  exit 2
+}
+
 if (Test-SecretReadTarget $commandText) {
   Write-Error '비밀 파일 읽기/검색 차단: .env, key/pem, token/secret/password/credential, auth.json 계열은 읽을 수 없습니다.'
   exit 2
@@ -179,9 +350,43 @@ if (Test-BasePythonDirectExecution $commandText) {
   exit 2
 }
 
+if (Test-WindowsAppsPythonAlias $commandText) {
+  Write-Error 'WindowsApps Python alias 실행 차단: crawler 자동화는 프로젝트 venv Python만 사용해야 합니다.'
+  exit 2
+}
+
+if (Test-AllowedCrawlerReadCommand $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedLovableReadCommand $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedCrawlerPyCompileCommand $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedCrawlerMainRunCommand $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedLovableNpmCommand $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedCrawlerRunLogAppend $commandText $contextText) {
+  exit 0
+}
+
+if (Test-AllowedAutomationGitCommand $commandText $contextText) {
+  exit 0
+}
+
 if (Test-WebNovelCrawlerVenvPython $commandText) {
   if (Test-WebNovelCrawlerAutomationContext $commandText $contextText) {
-    exit 0
+    Write-Error 'crawler venv Python 실행 범위 차단: read, py_compile, main.py 실행만 허용합니다.'
+    exit 2
   }
   Write-Error 'crawler venv Python 실행 범위 차단: web-novel-crawler-weekly-qa 자동화와 D:\Agent\Codex\web-novel-crawler cwd에서만 허용합니다.'
   exit 2
@@ -189,7 +394,8 @@ if (Test-WebNovelCrawlerVenvPython $commandText) {
 
 if (Test-WebNovelCrawlerRuntimePython $commandText) {
   if (Test-WebNovelCrawlerAutomationContext $commandText $contextText) {
-    exit 0
+    Write-Error 'crawler runtime Python 직접 실행 차단: 프로젝트 venv Python만 허용합니다.'
+    exit 2
   }
   Write-Error 'crawler runtime Python 실행 범위 차단: web-novel-crawler-weekly-qa 자동화와 D:\Agent\Codex\web-novel-crawler cwd에서만 허용합니다.'
   exit 2

@@ -57,3 +57,30 @@
 - 앞으로 크롤러 실행은 `D:\Agent\Codex\web-novel-crawler\.venv\Scripts\python.exe`만 사용한다.
 - `WEBAPP_URL`은 대화에 직접 붙여넣지 말고 사용자 환경변수나 비커밋 `.env` 방식으로 관리한다.
 - 실행 통과 후 카카오 수정 브랜치를 커밋하고 PR 생성 방식을 정한다.
+
+## 2026-08-03
+
+### 완료
+- 식물 관리 기록용 모바일 웹앱 `plant-log`를 만들었다.
+- Next.js 16, TypeScript, Tailwind CSS, PWA 구조로 구성했다.
+- 사진 업로드, 미리보기, 이미지 압축, 여러 장 선택 기능을 구현했다.
+- 식물 선택 UI를 만들고, 최근 선택 식물 저장 기능을 추가했다.
+- Notion 식물 관찰일지 DB에 사진, 식물명, 분류, 관찰일지, 관찰일을 저장하도록 연결했다.
+- 사진은 Notion `사진` 속성과 페이지 본문 이미지 블록에 모두 들어가도록 수정했다.
+- 식물명은 상세 식물명만 저장하고, 대분류는 Notion `분류` select 속성으로 분리 저장하도록 고쳤다.
+- 식물목록 DB를 Notion에서 불러오도록 `/api/plants`를 추가했다.
+- 식물목록 DB 속성은 `식물명` title, `대분류` select 기준으로 읽게 했다.
+- 식물페이지 UI에서 대분류는 `식물 선택` 오른쪽에 표시하고, 목록에는 상세 식물명만 보이게 정리했다.
+- GitHub 저장소 `wo0h881-dev/plant-log`에 커밋/푸시했다.
+- Vercel 배포용 환경변수 설정 흐름을 정리했다.
+
+### 확인 결과
+- `npm.cmd run lint` 통과.
+- `npm.cmd run build` 통과.
+- GitHub push 완료.
+- 식물DB 내용 변경은 재배포 없이 새로고침으로 반영되는 구조다.
+
+### 다음에 이어서 할 일
+- Vercel 환경변수 `NOTION_PLANTS_DATABASE_ID`가 식물목록 DB ID로 들어갔는지 확인한다.
+- 식물목록 DB와 관찰일지 DB 모두 Notion Integration `shortcut`에 연결되어 있어야 한다.
+- 식물페이지에서 새 기록을 저장해 Notion 속성과 본문 사진이 모두 들어가는지 최종 확인한다.
