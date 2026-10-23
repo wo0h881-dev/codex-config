@@ -84,3 +84,24 @@
 - Vercel 환경변수 `NOTION_PLANTS_DATABASE_ID`가 식물목록 DB ID로 들어갔는지 확인한다.
 - 식물목록 DB와 관찰일지 DB 모두 Notion Integration `shortcut`에 연결되어 있어야 한다.
 - 식물페이지에서 새 기록을 저장해 Notion 속성과 본문 사진이 모두 들어가는지 최종 확인한다.
+
+## 2026-10-23
+
+### 완료
+- `plant-log`의 Cloudflare Workers 배포 설정을 GitHub `main` 브랜치에 반영했다.
+- 원격 변경사항을 로컬 커밋과 리베이스한 뒤 GitHub에 푸시했다.
+- Cloudflare Workers에 식물 앱을 최초 배포했다.
+- Cloudflare Production 환경에 Notion 토큰과 식물·관찰·물주기·관리 DB 및 데이터 소스 ID를 등록했다.
+- 배포 주소 `https://plant-log.wo0h881.workers.dev`에서 Notion 식물 목록과 선택 옵션이 정상적으로 조회되는 것을 확인했다.
+- 식물 목록 API가 `source: notion`으로 응답하고, 기존 100개 조회 제한 없이 페이지네이션하도록 되어 있음을 확인했다.
+
+### 확인 결과
+- GitHub 커밋 `7a98ea3`까지 푸시됐다.
+- 식물 목록과 옵션 API의 Notion 연동이 정상 작동한다.
+- Cloudflare 대시보드에서 환경변수를 추가한 후 배포하면 기존 앱에 바로 적용된다.
+
+### 주의사항
+- 로컬 `npm.cmd run deploy:vinext`는 현재 Cloudflare 대시보드 설정과 충돌해 원격 환경변수나 바인딩을 덮어쓸 수 있으므로 사용하지 않는다.
+- 당분간 재배포는 Cloudflare 대시보드에서 진행한다.
+- `next/image` 최적화는 비활성화 상태라 큰 이미지가 많으면 로딩이 느려질 수 있다.
+- Vinext는 Next.js 완전 호환이 아니므로 Next.js 업데이트나 새로운 서버 기능 추가 후에는 Cloudflare 빌드와 주요 API를 다시 확인한다.

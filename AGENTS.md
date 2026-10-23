@@ -19,7 +19,7 @@
 - `.git`, `.codex`, `config`, `.env`, key/pem, token/secret/password/credential, `auth.json` 계열은 보호 대상으로 본다.
 
 ## 훅 관리
-- Codex 훅 설정 파일은 `C:\Users\suna\.codex\hooks.json`에 있다.
+- Codex 훅 설정 파일은 `C:\Users\user\.codex\hooks.json`에 있다.
 - 훅 스크립트는 `D:\Agent\Codex\tools\codex-hooks`에서 관리한다.
 - 훅 규칙 내용 변경은 보통 D쪽 `.ps1`만 수정한다.
 - 훅 실행 시점, 파일명, 위치를 바꿀 때만 C쪽 `hooks.json` 수정이 필요하다.
@@ -46,3 +46,8 @@
 - 사용자가 "이사해줘"라고 요청하면 `D:\Agent\Codex`의 Codex 설정 자산을 `codex-config` GitHub 저장소로 커밋/푸시한다.
 - 다른 컴퓨터에서 그대로 사용 가능하도록 스킬, 훅, 에이전트, 작업 규칙, 운영 문서를 포함한다.
 - 프로젝트 체크아웃(`Lovable_Dashboard/`, `web-novel-crawler/`), 의존성, 빌드 산출물, 가상환경, 비밀파일은 제외한다.
+
+## 복원 작업
+- 사용자가 "복원해줘"라고 요청하면 `codex-config` GitHub 저장소의 설정 자산을 `D:\Agent\Codex`로 내려받아 적용한다.
+- 현재 컴퓨터의 사용자 경로와 충돌 여부를 확인한 뒤 훅 설정을 적용한다.
+- 프로젝트 체크아웃, 의존성, 빌드 산출물, 가상환경, 비밀파일은 건드리지 않는다.
