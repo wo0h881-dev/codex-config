@@ -30,6 +30,7 @@ node_modules/
 __pycache__/
 .cache/
 runtime/
+tools/shortcut-inspect-deps/
 dist/
 build/
 target/
